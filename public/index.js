@@ -219,12 +219,7 @@ async function loadTasks() {
         confirmBtn.onclick = null;
         cancelBtn.onclick = null;
 
-        const handleEnter = (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            confirmBtn.click();
-          }
-        };
+        const handleEnter = (e) => handleEnterConfirmBtn(e, confirmBtn);
         deleteModal.addEventListener("keydown", handleEnter);
 
         confirmBtn.onclick = async () => {
@@ -309,33 +304,55 @@ async function loadTasks() {
           });
         });
 
-        saveBtn.onclick = async () => {
-          const newText = editText.value.trim();
-          const newDeadline = editDeadline.value;
-          const newCategory = editCategory.value;
-          const newPriority = editPriority.value;
+        saveBtn.onclick = () => {
+          const saveModal = document.getElementById("save-modal");
+          saveModal.style.display = "flex";
+          const confirmBtn = document.getElementById("save-confirm-btn");
+          const cancelBtn = document.getElementById("save-cancel-btn");
 
-          if (!newText) {
-            return;
-          }
-          try {
-            const response = await fetch(`/api/tasks/${task.id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({
-                taskText: newText,
-                deadline: newDeadline ? newDeadline : null,
-                category: newCategory,
-                priority: newPriority,
-              }),
-            });
-            if (!response.ok) throw new Error("Failed to update task");
-            showNotification("✏️ Task Updated!");
-            loadTasks();
-          } catch (error) {
-            alert("Could not update task. Please try again.");
-          }
+          confirmBtn.onclick = null;
+          cancelBtn.onclick = null;
+
+          const handleEnter = (e) => handleEnterConfirmBtn(e, confirmBtn);
+          saveModal.addEventListener("keydown", handleEnter);
+
+          confirmBtn.onclick = async () => {
+            const newText = editText.value.trim();
+            const newDeadline = editDeadline.value;
+            const newCategory = editCategory.value;
+            const newPriority = editPriority.value;
+
+            if (!newText) {
+              saveModal.style.display = "none";
+              saveModal.removeEventListener("keydown", handleEnter);
+              return;
+            }
+            try {
+              const response = await fetch(`/api/tasks/${task.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                  taskText: newText,
+                  deadline: newDeadline ? newDeadline : null,
+                  category: newCategory,
+                  priority: newPriority,
+                }),
+              });
+              if (!response.ok) throw new Error("Failed to update task");
+              showNotification("✏️ Task Updated!");
+              loadTasks();
+            } catch (error) {
+              alert("Could not update task. Please try again.");
+            }
+            saveModal.style.display = "none";
+            saveModal.removeEventListener("keydown", handleEnter);
+          };
+          cancelBtn.onclick = () => {
+            saveModal.style.display = "none";
+            saveModal.removeEventListener("keydown", handleEnter);
+          };
+          confirmBtn.focus();
         };
 
         cancelBtn.onclick = () => {
@@ -522,4 +539,11 @@ function showNotification(message) {
   setTimeout(() => {
     notification.classList.add("hide-notification");
   }, 1500);
+}
+
+function handleEnterConfirmBtn(e, confirmBtn) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    confirmBtn.click();
+  }
 }
