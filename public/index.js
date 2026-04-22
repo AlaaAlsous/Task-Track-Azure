@@ -161,7 +161,7 @@ async function loadTasks() {
 
       listItem.innerHTML = `<input type="checkbox" class="done-checkbox" style="accent-color: #d4a574;" ${
         task.done ? "checked" : ""
-      }/> <div class="task-id">${task.id}</div><div class="task-text">${
+      }/> <div class="task-id">${task.userTaskNumber ?? task.id}</div><div class="task-text">${
         task.taskText +
         (timeIsUp ? "<span style = color:#750000> Expired!</span>" : "")
       }</div> <div class="task-deadline">${formattedDeadline}</div>  <div class="task-category">${
@@ -415,6 +415,19 @@ async function doRegisterModal() {
 
 loginBtnModal.onclick = doLoginModal;
 registerBtnModal.onclick = doRegisterModal;
+
+const registerUsernameInput = document.getElementById("modal-reg-username");
+const registerPasswordInput = document.getElementById("modal-reg-password");
+if (registerUsernameInput && registerPasswordInput && registerBtnModal) {
+  [registerUsernameInput, registerPasswordInput].forEach((el) => {
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        registerBtnModal.click();
+      }
+    });
+  });
+}
 
 const loginUsernameInput = document.getElementById("modal-login-username");
 const loginPasswordInput = document.getElementById("modal-login-password");

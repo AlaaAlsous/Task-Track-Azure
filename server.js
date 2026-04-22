@@ -39,13 +39,13 @@ async function loadSecretsAndStart() {
   startServer();
 }
 
-let sqlPool;
+let db;
 async function connectToSql() {
   try {
-    sqlPool = await sql.connect(sqlConnectionString);
+    db = await sql.connect(sqlConnectionString);
     console.log("Connected to Azure SQL Database/SQL Server!");
 
-    await sqlPool.request().query(`
+    await db.request().query(`
       IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'users')
       CREATE TABLE users (
         id INT IDENTITY(1,1) PRIMARY KEY,
@@ -109,7 +109,7 @@ function startServer() {
           .status(400)
           .json({ error: "Username and password are required." });
       }
-      const result = await sqlPool
+      const result = await db
         .request()
         .input("username", sql.NVarChar(50), username)
         .query("SELECT id FROM users WHERE LOWER(username) = LOWER(@username)");
@@ -117,7 +117,7 @@ function startServer() {
         return res.status(409).json({ error: "User already exists." });
       }
       const passwordHash = await bcryptjs.hash(String(password), 10);
-      const insertResult = await sqlPool
+      const insertResult = await db
         .request()
         .input("username", sql.NVarChar(50), username)
         .input("passwordHash", sql.NVarChar(255), passwordHash)
@@ -140,7 +140,7 @@ function startServer() {
           .status(400)
           .json({ error: "Username and password are required." });
       }
-      const result = await sqlPool
+      const result = await db
         .request()
         .input("username", sql.NVarChar(50), username)
         .query(
@@ -178,7 +178,7 @@ function startServer() {
       return res.status(401).json({ error: "The user is not logged in." });
     }
     try {
-      const result = await sqlPool
+      const result = await db
         .request()
         .input("id", sql.Int, req.session.userId)
         .query("SELECT id, username FROM users WHERE id = @id");
@@ -201,10 +201,15 @@ function startServer() {
 
   app.get("/api/tasks", requireAuth, async (req, res) => {
     try {
-      const result = await sqlPool
+      const result = await db
         .request()
-        .input("userId", sql.Int, req.session.userId)
-        .query("SELECT * FROM tasks WHERE userId = @userId ORDER BY id");
+        .input("userId", sql.Int, req.session.userId).query(`
+          SELECT *,
+            ROW_NUMBER() OVER (ORDER BY id) AS userTaskNumber
+          FROM tasks
+          WHERE userId = @userId
+          ORDER BY id
+        `);
       res.json(result.recordset);
     } catch {
       res
@@ -230,7 +235,7 @@ function startServer() {
       const categoryVal = allowedCategories.has(category)
         ? category
         : "No Category";
-      const insertResult = await sqlPool
+      const insertResult = await db
         .request()
         .input("userId", sql.Int, req.session.userId)
         .input("taskText", sql.NVarChar(100), String(taskText).trim())
@@ -254,7 +259,7 @@ function startServer() {
       const taskId = Number(req.params.id);
       const { done, taskText, priority, deadline, category } = req.body;
 
-      const result = await sqlPool
+      const result = await db
         .request()
         .input("id", sql.Int, taskId)
         .input("userId", sql.Int, req.session.userId)
@@ -317,7 +322,7 @@ function startServer() {
         return res.json(task);
       }
 
-      let reqSql = sqlPool
+      let reqSql = db
         .request()
         .input("id", sql.Int, params.id)
         .input("userId", sql.Int, params.userId);
@@ -334,7 +339,7 @@ function startServer() {
         `UPDATE tasks SET ${updates.join(", ")} WHERE id = @id AND userId = @userId`,
       );
 
-      const updated = await sqlPool
+      const updated = await db
         .request()
         .input("id", sql.Int, taskId)
         .query("SELECT * FROM tasks WHERE id = @id");
@@ -349,7 +354,7 @@ function startServer() {
   app.delete("/api/tasks/:id", requireAuth, async (req, res) => {
     try {
       const taskId = Number(req.params.id);
-      const result = await sqlPool
+      const result = await db
         .request()
         .input("id", sql.Int, taskId)
         .input("userId", sql.Int, req.session.userId)
