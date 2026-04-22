@@ -69,6 +69,8 @@ const sortByIdCheckbox = document.getElementById("sortById");
 const sortByPriorityCheckbox = document.getElementById("sortByPriority");
 const sortByCategoryCheckbox = document.getElementById("sortByCategory");
 
+let editingTask = null;
+
 async function loadTasks() {
   try {
     const response = await fetch("/api/tasks", { credentials: "include" });
@@ -251,9 +253,29 @@ async function loadTasks() {
 
       const editBtn = listItem.querySelector(".editBtn");
       editBtn.onclick = () => {
+        if (editingTask && editingTask !== listItem) {
+          showEditModal(
+            () => {
+              const saveBtn = editingTask.querySelector(".saveBtn");
+              if (saveBtn) saveBtn.click();
+            },
+            () => {
+              editingTask = null;
+              loadTasks();
+            },
+            () => {
+              if (editingTask) {
+                const input = editingTask.querySelector("#edit-text");
+                if (input) input.focus();
+              }
+            },
+          );
+          return;
+        }
+        editingTask = listItem;
         const deadlineValue = task.deadline ? task.deadline : "";
         listItem.innerHTML = `
-            <div class="task-id">${task.id}</div>
+            <div class="task-id">${task.userTaskNumber}</div>
             <input id="edit-text" type="text" maxlength="100" style="outline:none;" value="${task.taskText.replace(
               /"/g,
               "&quot;",
@@ -304,58 +326,35 @@ async function loadTasks() {
           });
         });
 
-        saveBtn.onclick = () => {
-          const saveModal = document.getElementById("save-modal");
-          saveModal.style.display = "flex";
-          const confirmBtn = document.getElementById("save-confirm-btn");
-          const cancelBtn = document.getElementById("save-cancel-btn");
-
-          confirmBtn.onclick = null;
-          cancelBtn.onclick = null;
-
-          const handleEnter = (e) => handleEnterConfirmBtn(e, confirmBtn);
-          saveModal.addEventListener("keydown", handleEnter);
-
-          confirmBtn.onclick = async () => {
-            const newText = editText.value.trim();
-            const newDeadline = editDeadline.value;
-            const newCategory = editCategory.value;
-            const newPriority = editPriority.value;
-
-            if (!newText) {
-              saveModal.style.display = "none";
-              saveModal.removeEventListener("keydown", handleEnter);
-              return;
-            }
-            try {
-              const response = await fetch(`/api/tasks/${task.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                  taskText: newText,
-                  deadline: newDeadline ? newDeadline : null,
-                  category: newCategory,
-                  priority: newPriority,
-                }),
-              });
-              if (!response.ok) throw new Error("Failed to update task");
-              showNotification("✏️ Task Updated!");
-              loadTasks();
-            } catch (error) {
-              alert("Could not update task. Please try again.");
-            }
-            saveModal.style.display = "none";
-            saveModal.removeEventListener("keydown", handleEnter);
-          };
-          cancelBtn.onclick = () => {
-            saveModal.style.display = "none";
-            saveModal.removeEventListener("keydown", handleEnter);
-          };
-          confirmBtn.focus();
+        saveBtn.onclick = async () => {
+          const newText = editText.value.trim();
+          const newDeadline = editDeadline.value;
+          const newCategory = editCategory.value;
+          const newPriority = editPriority.value;
+          if (!newText) return;
+          try {
+            const response = await fetch(`/api/tasks/${task.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                taskText: newText,
+                deadline: newDeadline ? newDeadline : null,
+                category: newCategory,
+                priority: newPriority,
+              }),
+            });
+            if (!response.ok) throw new Error("Failed to update task");
+            showNotification("✏️ Task Updated!");
+            editingTask = null;
+            loadTasks();
+          } catch (error) {
+            alert("Could not update task. Please try again.");
+          }
         };
 
         cancelBtn.onclick = () => {
+          editingTask = null;
           loadTasks();
         };
       };
@@ -500,6 +499,31 @@ async function addTask() {
   }
 }
 addBtn.onclick = addTask;
+
+function showEditModal(onSave, onCancel, onContinue) {
+  const modal = document.getElementById("save-modal");
+  modal.style.display = "flex";
+  const saveBtn = document.getElementById("save-modal-save");
+  const cancelBtn = document.getElementById("save-modal-cancel");
+  const continueBtn = document.getElementById("save-modal-continue");
+
+  saveBtn.onclick = null;
+  cancelBtn.onclick = null;
+  continueBtn.onclick = null;
+
+  saveBtn.onclick = () => {
+    modal.style.display = "none";
+    onSave?.();
+  };
+  cancelBtn.onclick = () => {
+    modal.style.display = "none";
+    onCancel?.();
+  };
+  continueBtn.onclick = () => {
+    modal.style.display = "none";
+    onContinue?.();
+  };
+}
 
 taskTextInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
