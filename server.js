@@ -85,7 +85,7 @@ function startServer() {
   app.use(express.static("public"));
   app.use(express.json());
 
-  const isProd = false;
+  const isProd = process.env.NODE_ENV === "production";
   app.use(
     session({
       name: "sid",
@@ -94,7 +94,7 @@ function startServer() {
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
-        secure: isProd,
+        secure: isProd, 
         sameSite: isProd ? "none" : "lax",
         maxAge: 1000 * 60 * 60 * 24 * 7,
       },
