@@ -76,13 +76,13 @@ function startServer() {
   const app = express();
   const port = process.env.PORT || 3000;
   console.log("Listening on port:", port);
+  app.use(express.static("public"));
 
   app.get("/", (req, res) => {
     res.sendFile("index.html", { root: "public" });
   });
 
   app.set("trust proxy", 1);
-  app.use(express.static("public"));
   app.use(express.json());
 
   const isProd = process.env.NODE_ENV === "production";
@@ -94,7 +94,7 @@ function startServer() {
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
-        secure: isProd, 
+        secure: isProd,
         sameSite: isProd ? "none" : "lax",
         maxAge: 1000 * 60 * 60 * 24 * 7,
       },

@@ -571,3 +571,5 @@ function handleEnterConfirmBtn(e, confirmBtn) {
     confirmBtn.click();
   }
 }
+
+document.getElementById("year").textContent = new Date().getFullYear();
