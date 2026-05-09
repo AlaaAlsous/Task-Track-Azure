@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sv">
   <head>
     <meta charset="UTF-8" />
@@ -6,6 +6,7 @@
     <title>Page Not Found - Task Track</title>
     <link rel="icon" type="image/png" href="/Assets/favicon.png" />
     <link rel="stylesheet" href="/styles.css" />
+    <script src="/index.js" defer></script>
   </head>
   <body>
     <header>
@@ -33,6 +34,11 @@
         <p>Please check the URL or Click "Home" to get back on track!.</p>
       </section>
     </main>
-    <footer><p>© 2026 Task Track - MAAS</p></footer>
+    <footer>
+      <p>© <span id="footeryear"></span> Task Track</p>
+    </footer>
   </body>
 </html>
+<script>
+  document.getElementById("footeryear").textContent = new Date().getFullYear();
+</script>

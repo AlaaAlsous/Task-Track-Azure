@@ -572,4 +572,3 @@ function handleEnterConfirmBtn(e, confirmBtn) {
   }
 }
 
-document.getElementById("year").textContent = new Date().getFullYear();
